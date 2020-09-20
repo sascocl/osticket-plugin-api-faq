@@ -3,17 +3,19 @@ osTicket Plugin API FAQ
 
 Plugin for query the FAQ via API
 
-You can make a search in:
+You can make a search with something like this:
 
     https://osticket.example.com/api/http.php/faq/search.json?q=query+string
 
 The API return an array of JSON objects with the fields:
 
-- category
 - faq_id
 - question
 - keywords
 - url
+- category_id
+- category_name
+- category_url
 
 You can pass 2 variables via GET (in the URL):
 

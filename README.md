@@ -17,4 +17,8 @@ The API return an JSON with the fields:
 
 The search is made only in public FAQ.
 
+Before making queries, you must create a FULL TEXT INDEX:
+
+    CREATE FULLTEXT INDEX ost_faq_fulltext_idx  ON ost_faq (question, answer, keywords);
+
 License of the project: AGPL

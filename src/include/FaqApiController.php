@@ -41,28 +41,29 @@ class FaqApiController extends ApiController
             $filter = db_input($filter, false);
         }
         // base url
-        $url_base = db_input($ost->config->getUrl() . 'kb/faq.php?id=', false);
+        $url_base = db_input($ost->config->getUrl() . 'kb/faq.php?', false);
         // exec query and get results
         $res = db_query('
             SELECT
-                c.name AS category,
                 f.faq_id,
                 f.question,
                 TRIM(f.keywords) AS keywords,
-                CONCAT(\'' . $url_base . '\', f.faq_id) AS url
+                CONCAT(\'' . $url_base . 'id=\', f.faq_id) AS url,
+                c.category_id,
+                c.name AS category_name,
+                CONCAT(\'' . $url_base . 'cid=\', c.category_id) AS category_url
             FROM
                 ost_faq AS f
                 JOIN ost_faq_category AS c ON c.category_id = f.category_id
             WHERE
                 c.ispublic = true
                 AND f.ispublished = true
-                AND (
-                    f.question LIKE \'%' . $filters['q'] . '%\'
-                    OR f.answer LIKE \'%' . $filters['q'] . '%\'
-                    OR f.keywords LIKE \'%' . $filters['q'] . '%\'
-                )
+                AND MATCH (f.question, f.answer, f.keywords) AGAINST (\'' . $filters['q'] . '\' IN NATURAL LANGUAGE MODE)
             ORDER BY c.name, f.question
         ');
+        if ($res === false) {
+            return $this->exerr(500, __('SQL error: empty res from db_query'));
+        }
         $result = db_assoc_array($res);
         db_free_result($res);
         // prepare response from result

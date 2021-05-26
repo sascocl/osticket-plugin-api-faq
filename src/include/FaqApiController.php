@@ -22,7 +22,7 @@ require_once(INCLUDE_DIR.'class.api.php');
 /**
  * Controlador de la API de las FAQ con las acciones de los recursos de la API
  * @author Esteban De La Fuente Rubio, DeLaF (esteban[at]sasco.cl)
- * @version 2020-09-20
+ * @version 2021-05-26
  */
 class FaqApiController extends ApiController
 {
@@ -42,24 +42,33 @@ class FaqApiController extends ApiController
         }
         // base url
         $url_base = db_input($ost->config->getUrl() . 'kb/faq.php?', false);
-        // search cols
-        if (!empty($filters['search_in_answer'])) {
-            $search_cols = 'f.question, f.answer, f.keywords';
-        } else {
-            $search_cols = 'f.question, f.keywords';
+        // search by specific ID
+        if (is_numeric($filters['q'])) {
+            $search_where = 'f.faq_id = '.(int)$filters['q'];
         }
-        // search mode
-        if (!empty($filters['search_mode'])) {
-            if ($filters['search_mode'] == 'natural') {
-                $search_mode = 'NATURAL LANGUAGE';
+        // search by text
+        else {
+            // search cols
+            if (!empty($filters['search_in_answer'])) {
+                $search_cols = 'f.question, f.answer, f.keywords';
+            } else {
+                $search_cols = 'f.question, f.keywords';
+            }
+            // search mode
+            if (!empty($filters['search_mode'])) {
+                if ($filters['search_mode'] == 'natural') {
+                    $search_mode = 'NATURAL LANGUAGE';
+                } else {
+                    $search_mode = 'BOOLEAN';
+                }
             } else {
                 $search_mode = 'BOOLEAN';
             }
-        } else {
-            $search_mode = 'BOOLEAN';
+            // words for search
+            $filters['q'] = implode(' ', array_map(function($e) {return '+'.$e;}, explode(' ', preg_replace('!\s+!', ' ', $filters['q']))));
+            // search where string
+            $search_where = 'MATCH (' . $search_cols . ') AGAINST (\'' . $filters['q'] . '\' IN ' . $search_mode . ' MODE)';
         }
-        // words for search
-        $filters['q'] = implode(' ', array_map(function($e) {return '+'.$e;}, explode(' ', preg_replace('!\s+!', ' ', $filters['q']))));
         // exec query and get results
         $res = db_query('
             SELECT
@@ -76,7 +85,7 @@ class FaqApiController extends ApiController
             WHERE
                 c.ispublic = true
                 AND f.ispublished = true
-                AND MATCH (' . $search_cols . ') AGAINST (\'' . $filters['q'] . '\' IN ' . $search_mode . ' MODE)
+                AND '.$search_where.'
             ORDER BY c.name, f.question
         ');
         if ($res === false) {

@@ -33,7 +33,7 @@ class FaqApiController extends ApiController
         // check api key
         $this->requireApiKey();
         // filters for the search
-        if (empty($_GET['q'])) {
+        if (empty($_GET['q']) && empty($_GET['id'])) {
             return $this->exerr(400, __('You must specified a query string'));
         }
         $filters = $_GET;
@@ -43,8 +43,9 @@ class FaqApiController extends ApiController
         // base url
         $url_base = db_input($ost->config->getUrl() . 'kb/faq.php?', false);
         // search by specific ID
-        if (is_numeric($filters['q'])) {
-            $search_where = 'f.faq_id = '.(int)$filters['q'];
+        if (!empty($filters['id'])) {
+            $filters['id'] = array_map('intval', explode(',', $filters['id']));
+            $search_where = 'f.faq_id IN ('.implode(', ', $filters['id']).')';
         }
         // search by text
         else {

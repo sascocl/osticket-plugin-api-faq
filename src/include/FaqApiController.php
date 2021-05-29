@@ -33,12 +33,14 @@ class FaqApiController extends ApiController
         // check api key
         $this->requireApiKey();
         // filters for the search
-        if (empty($_GET['q']) && empty($_GET['id'])) {
+        if (empty(trim($_GET['q'])) && empty(trim($_GET['id']))) {
             return $this->exerr(400, __('You must specified a query string'));
         }
         $filters = $_GET;
         foreach ($filters as &$filter) {
-            $filter = db_input($filter, false);
+            $filter = str_replace(['-'], '', $filter);
+            $filter = preg_replace('/\s+/', ' ', $filter);
+            $filter = db_input(trim($filter), false);
         }
         // base url
         $url_base = db_input($ost->config->getUrl() . 'kb/faq.php?', false);

@@ -17,8 +17,10 @@ The API return an array of JSON objects with the fields:
 - category_name
 - category_url
 
-You can pass 2 variables via GET (in the URL):
+You can pass 4 variables via GET (in the URL):
 
+- q = query text for searching
+- c = root category from where to make the search
 - search_in_answer = 1 will search inside answer column (by default disabled)
 - search_mode = natural will search with "IN NATURAL LANGUAGE MODE" of FULL TEXT SEARCH (by default: BOOLEAN MODE)
 

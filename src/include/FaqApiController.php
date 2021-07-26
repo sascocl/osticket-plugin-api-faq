@@ -22,7 +22,7 @@ require_once(INCLUDE_DIR.'class.api.php');
 /**
  * Controlador de la API de las FAQ con las acciones de los recursos de la API
  * @author Esteban De La Fuente Rubio, DeLaF (esteban[at]sasco.cl)
- * @version 2021-05-26
+ * @version 2021-07-26
  */
 class FaqApiController extends ApiController
 {
@@ -39,7 +39,7 @@ class FaqApiController extends ApiController
         $filters = $_GET;
         foreach ($filters as &$filter) {
             $filter = str_replace(['-'], '', $filter);
-            $filter = preg_replace('/\s+/', ' ', $filter);
+            $filter = preg_replace('!\s+!', ' ', $filter);
             $filter = db_input(trim($filter), false);
         }
         // base url
@@ -68,9 +68,24 @@ class FaqApiController extends ApiController
                 $search_mode = 'BOOLEAN';
             }
             // words for search
-            $filters['q'] = implode(' ', array_map(function($e) {return '+'.$e;}, explode(' ', preg_replace('!\s+!', ' ', $filters['q']))));
+            $filters['q'] = implode(' ', array_map(function($e) {return '+'.$e;}, explode(' ', $filters['q'])));
             // search where string
             $search_where = 'MATCH (' . $search_cols . ') AGAINST (\'' . $filters['q'] . '\' IN ' . $search_mode . ' MODE)';
+            // search under certain category
+            if (!empty($filters['c'])) {
+                $search_where .= ' AND c.category_id IN (
+                    WITH RECURSIVE subcategory AS (
+                        (
+                            SELECT c.category_id
+                            FROM ost_faq_category AS c
+                            WHERE c.category_id = ' . intval($filters['c']) . '
+                        ) UNION (
+                            SELECT c.category_id
+                            FROM ost_faq_category AS c JOIN subcategory AS s ON s.category_id = c.category_pid
+                        )
+                    ) SELECT * FROM subcategory
+                )';
+            }
         }
         // exec query and get results
         $res = db_query('
@@ -86,8 +101,8 @@ class FaqApiController extends ApiController
                 ost_faq AS f
                 JOIN ost_faq_category AS c ON c.category_id = f.category_id
             WHERE
-                c.ispublic = true
-                AND f.ispublished = true
+                c.ispublic > 0 -- =1 pública, =2 destacada
+                AND f.ispublished > 0 -- =1 pública, =2 destacada
                 AND '.$search_where.'
             ORDER BY c.name, f.question
         ');
